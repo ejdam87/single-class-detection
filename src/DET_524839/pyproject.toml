@@ -1,7 +1,7 @@
 [project]
-name = "projcode-uco"
+name = "det-524839"
 version = "0.1.0"
-description = ""
+description = " Single class detection ML pipeline "
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -11,4 +11,13 @@ dependencies = [
     "pillow>=11.1.0",
     "torch>=2.6.0",
     "torchview>=0.2.6",
+]
+
+[tool.setuptools]
+packages = []
+
+[project.optional-dependencies]
+dev = [
+  "jupyterlab",
+  "ipykernel"
 ]
