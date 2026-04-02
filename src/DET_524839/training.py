@@ -9,7 +9,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import torch
-from dataset import SampleDataset
+from dataset import DetectionDataset
 from network import ModelExample
 from torch import Tensor, nn
 from torch.optim import Optimizer
@@ -97,7 +97,7 @@ def training(dataset_path: Path) -> None:
     print("Computing with {}!".format(device))
 
     batch_size = 64
-    train_dataset, val_dataset = SampleDataset(), SampleDataset()
+    train_dataset, val_dataset = DetectionDataset(), DetectionDataset()
     train_dataloader, val_dataloader = None, None
 
     net = ModelExample()
