@@ -24,17 +24,18 @@ T = TypeVar("T")
 
 class DetectionDataset(ABC, Dataset[T], Generic[T]):
 
-    def __init__(self, image_paths: list[Path]) -> None:
+    def __init__(self, df: pd.DataFrame) -> None:
         super().__init__()
+        assert "image_path" in df.columns, "Need a path to the image"
 
-        self.image_paths = image_paths
+        self.df = df
         self.to_tensor = ToTensorV2()
 
     def __len__(self) -> int:
-        return len(self.image_paths)
+        return len(self.df)
 
-    def _get_image(self, idx: int) -> Tensor:
-        img = Image.open(str(self.image_paths[idx]))
+    def _get_image(self, sample: pd.Series) -> Tensor:
+        img = Image.open(sample["image_path"])
         img = np.array(img)
         img = self.to_tensor(image=img)["image"]
         return img
@@ -45,26 +46,21 @@ class DetectionDataset(ABC, Dataset[T], Generic[T]):
 
 class LabeledDetectionDataset(DetectionDataset[LabeledSample]):
 
-    def __init__(
-            self,
-            image_paths: list[Path],
-            bbox_paths: list[Path],
-        ) -> None:
-
-        assert len(image_paths) == len(bbox_paths), "Expecting same amount of images and labels"
-        super().__init__(image_paths=image_paths)
-
-        self.bbox_paths = bbox_paths
+    def __init__(self, df: pd.DataFrame) -> None:
+        assert "bbox_path" in df.columns, "Need labels for labeled dataset"
+        super().__init__(df=df)
 
     def __getitem__(self, idx: int) -> LabeledSample:
-        img = self._get_image(idx)
+        sample = self.df.iloc[idx]
+        img = self._get_image(sample)
 
-        bbox_df = pd.read_csv(str(self.bbox_paths[idx]))
+        bbox_df = pd.read_csv(sample["bbox_path"])
         bbox_torch = torch.tensor(bbox_df[["xmin", "ymin", "xmax", "ymax"]].values, dtype=torch.float32)
 
         metadata = {
-            "filename": self.image_paths[idx].name,
-            "n_labeled_cars": len(bbox_df),
+            "filename": Path(sample["image_path"]).name,
+            "n_labeled_cars": sample["n_objects"],
+            "city": sample["city"],
         }
 
         return img, metadata, bbox_torch
@@ -73,9 +69,11 @@ class LabeledDetectionDataset(DetectionDataset[LabeledSample]):
 class UnlabeledDetectionDataset(DetectionDataset[UnlabeledSample]):
 
     def __getitem__(self, idx: int) -> UnlabeledSample:
-        img = self._get_image(idx)
+        sample = self.df.iloc[idx]
+        img = self._get_image(sample)
         metadata = {
-            "filename": self.image_paths[idx].name,
+            "filename": Path(sample["image_path"]).name,
+            "city": sample["city"],
         }
 
         return img, metadata
