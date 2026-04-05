@@ -2,8 +2,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
+VAL_SIZE = 0.2
+RANDOM_STATE = 42
+
+
 def train_val_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    t_df, v_df = train_test_split(df, test_size=0.2, random_state=42, stratify=df["city"])
+    t_df, v_df = train_test_split(df, test_size=VAL_SIZE, random_state=RANDOM_STATE, stratify=df["city"])
     return t_df, v_df
 
 

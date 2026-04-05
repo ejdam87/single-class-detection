@@ -9,12 +9,28 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import torch
-from dataset import DetectionDataset
+from tqdm import tqdm
+from dataset import LabeledDetectionDataset
 from network import ModelExample
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchview import draw_graph
+
+from preprocessing.explore import explore_dataset
+from preprocessing.data_split import train_val_split
+
+
+TRAIN_CONFIG = {
+    "epochs": 3,
+    "batch_size": 64,
+    "optimizer": torch.optim.AdamW,
+    "optimizer_params": {
+        "lr": 1e-3
+    },
+    "loss": torch.nn.MSELoss,
+    "loss_params": {},
+}
 
 
 # sample function for model architecture visualization
@@ -45,36 +61,73 @@ def plot_learning_curves(
     plt.savefig("learning_curves.png")
 
 
-# sample function for training
+def loss_batch(
+          model: nn.Module,
+          loss_func: nn.Module,
+          xb: Tensor,
+          yb: Tensor,
+          dev: torch.device,
+          opt: Optimizer=None
+    ) -> float:
+
+    xb, yb = xb.to(dev), yb.to(dev)
+    loss = loss_func(model(xb), yb)
+
+    if opt is not None:
+        loss.backward()
+        opt.step()
+        opt.zero_grad()
+
+    return loss.item()
+
+
+def train_epoch(
+          model: nn.Module,
+          train_dl: DataLoader,
+          loss_func: nn.Module,
+          dev: torch.device,
+          opt: Optimizer
+    ) -> float:
+
+        model.train()
+        loss = 0
+        for xb, yb in tqdm(train_dl, total=len(train_dl), leave=False):
+            b_loss = loss_batch(model, loss_func, xb, yb, dev, opt)
+            loss += b_loss
+            size += len(xb)
+
+        return loss
+
+
+def val_epoch(model: nn.Module, val_dl: DataLoader, loss_func: nn.Module, dev: torch.device) -> float:
+        model.eval()
+
+        loss = 0
+        with torch.no_grad():
+            for xb, yb in tqdm(val_dl, total=len(val_dl), leave=False):
+                loss += loss_batch(model, loss_func, xb, yb, dev)
+            
+        return loss
+
+
 def fit(
     net: nn.Module,
-    batch_size: int,
-    epochs: int,
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     loss: nn.Module,
     optimizer: Optimizer,
     device: torch.device,
 ) -> tuple[list[float], list[float]]:
+
     train_losses: list[float] = []
     val_losses: list[float] = []
 
-    running_loss = 0.0
-    for epoch in range(epochs):
-        for batch_idx in range(0, 10):
-            # add current loss
-            running_loss += 0.1
+    for _ in range(TRAIN_CONFIG["epochs"]):
+        tl = train_epoch(net, train_dataloader, loss, device, optimizer)
+        vl = val_epoch(net, val_dataloader, loss, device)
 
-            # graph variables
-            train_losses.append(running_loss)
-            val_losses.append(running_loss - 0.1)
-
-        # print training info
-        print(
-            "Epoch {}, train loss: {:.5f}, val loss: {:.5f}".format(
-                epoch, running_loss / 42, running_loss / 42
-            )
-        )
+        train_losses.append(tl)
+        val_losses.append(vl)
 
     print("Training finished!")
     return train_losses, val_losses
@@ -92,32 +145,46 @@ def training(dataset_path: Path) -> None:
         - learning_curves.png (learning curves generated during training)
         - model_architecture.png (a scheme of model's architecture)
     """
-    # Check for available GPU
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Computing with {}!".format(device))
 
-    batch_size = 64
-    train_dataset, val_dataset = DetectionDataset(), DetectionDataset()
-    train_dataloader, val_dataloader = None, None
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Computing with {device}!")
+
+    df = explore_dataset(dataset_path)
+    print("Data frame prepared!")
+
+    train_df, val_df = train_val_split(df)
+    print("Data splitted!")
+
+    train_dataset = LabeledDetectionDataset(train_df)
+    val_dataset = LabeledDetectionDataset(val_df)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG["batch_size"], shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"])
+    print("Dataloaders created!")
 
     net = ModelExample()
     input_sample = torch.zeros((1, 512, 1024))
     draw_network_architecture(net, input_sample)
 
-    # define optimizer and learning rate
-    optimizer = None
+    optimizer = TRAIN_CONFIG["optimizer"](net.parameters(), **TRAIN_CONFIG["optimizer_params"])
+    loss = TRAIN_CONFIG["loss"](**TRAIN_CONFIG["loss_params"])
 
-    # define loss function
-    loss = None
-
-    # train the network
+    print("Training started!")
     train_losses, val_losses = fit(
-        net, batch_size, 3, train_dataloader, val_dataloader, loss, optimizer, device
+        net,
+        train_dataloader,
+        val_dataloader,
+        loss,
+        optimizer,
+        device
     )
+    print("Training finished!")
 
-    # save the trained model and plot the losses, feel free to create your own functions
     torch.save(net.state_dict(), "model.pt")
+    print("Model saved!")
+
     plot_learning_curves(train_losses, val_losses)
+    print("Learning curves saved!")
 
 
 # #### code below should not be changed ############################################################################

@@ -14,6 +14,7 @@ dependencies = [
     "pandas",
     "albumentations",
     "scikit-learn",
+    "tqdm",
 ]
 
 [tool.setuptools]
