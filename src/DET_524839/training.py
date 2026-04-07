@@ -12,7 +12,7 @@ import torch
 import pandas as pd
 from tqdm import tqdm
 from dataset import LabeledDetectionDataset
-from network import ModelExample
+from network import SimpleGridDetector
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
@@ -20,17 +20,7 @@ from torchview import draw_graph
 from sklearn.model_selection import train_test_split
 
 
-TRAIN_CONFIG = {
-    "epochs": 3,
-    "batch_size": 64,
-    "optimizer": torch.optim.AdamW,
-    "optimizer_params": {
-        "lr": 1e-3
-    },
-    "loss": torch.nn.MSELoss,
-    "loss_params": {},
-}
-
+# --- Exploration and Pre-processing part
 VAL_SIZE = 0.2
 RANDOM_STATE = 42
 
@@ -61,12 +51,24 @@ def explore_dataset(dataset_path: Path) -> pd.DataFrame:
 
     final_df = pd.DataFrame(data)
     return final_df
+# ---
 
 
-# sample function for model architecture visualization
+# --- Training and Validation part
+TRAIN_CONFIG = {
+    "epochs": 3,
+    "batch_size": 64,
+    "optimizer": torch.optim.AdamW,
+    "optimizer_params": {
+        "lr": 1e-3
+    },
+    "loss": torch.nn.MSELoss,
+    "loss_params": {},
+}
+
+
 # draw_graph function saves an additional file: Graphviz DOT graph file, it's not necessary to delete it
 def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:
-    # saves visualization of model architecture to the model_architecture.png
     draw_graph(
         net,
         input_sample,
@@ -77,15 +79,12 @@ def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:
     )
 
 
-# sample function for losses visualization
-def plot_learning_curves(
-    train_losses: list[float], validation_losses: list[float]
-) -> None:
+def plot_learning_curves(train_losses: list[float], validation_losses: list[float]) -> None:
     plt.figure(figsize=(10, 5))
     plt.title("Train and Evaluation Losses During Training")
     plt.plot(train_losses, label="train_loss")
     plt.plot(validation_losses, label="validation_loss")
-    plt.xlabel("iterations")
+    plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig("learning_curves.png")
@@ -192,7 +191,7 @@ def training(dataset_path: Path) -> None:
     val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"])
     print("Dataloaders created!")
 
-    net = ModelExample()
+    net = SimpleGridDetector(grid_size=10)
     input_sample = torch.zeros((1, 512, 1024))
     draw_network_architecture(net, input_sample)
 
@@ -216,6 +215,7 @@ def training(dataset_path: Path) -> None:
     plot_learning_curves(train_losses, val_losses)
     print("Learning curves saved!")
 
+# ---
 
 # #### code below should not be changed ############################################################################
 
