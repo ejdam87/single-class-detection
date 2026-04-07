@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import torch
 import pandas as pd
 from tqdm import tqdm
-from dataset import LabeledDetectionDataset
+from dataset import LabeledDetectionDataset, UnlabeledDetectionDataset, DetectionDataset
 from network import SimpleGridDetector
 from torch import Tensor, nn
 from torch.optim import Optimizer
@@ -23,6 +23,10 @@ from sklearn.model_selection import train_test_split
 # --- Exploration and Pre-processing part
 VAL_SIZE = 0.2
 RANDOM_STATE = 42
+
+# pre-computed for training data
+MEAN = [81.7474, 59.7219, 70.0178]
+STD = [47.6729, 41.8091, 46.3294]
 
 
 def train_val_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -51,11 +55,29 @@ def explore_dataset(dataset_path: Path) -> pd.DataFrame:
 
     final_df = pd.DataFrame(data)
     return final_df
+
+def compute_mean_std(dataset: DetectionDataset) -> tuple[Tensor, Tensor]:
+    sm = torch.zeros(3, dtype=torch.float64)
+    sq_sm = torch.zeros(3, dtype=torch.float64)
+    total = 0
+
+    for i in range(len(dataset)):
+        im, _ = dataset[i]
+        im = im.float()
+        sm += torch.sum(im, dim=[1, 2])
+        sq_sm += torch.sum(im ** 2, dim=[1, 2])
+        total += im.shape[1] * im.shape[2]
+
+    mean = sm / total
+    var = (sq_sm / total) - (mean ** 2)
+    std = torch.sqrt(var)
+    return mean, std
 # ---
 
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
+    "use_precomputed_mean_std": True,
     "epochs": 3,
     "batch_size": 64,
     "optimizer": torch.optim.AdamW,
