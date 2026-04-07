@@ -9,6 +9,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import torch
+import pandas as pd
 from tqdm import tqdm
 from dataset import LabeledDetectionDataset
 from network import ModelExample
@@ -16,9 +17,7 @@ from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchview import draw_graph
-
-from preprocessing.explore import explore_dataset
-from preprocessing.data_split import train_val_split
+from sklearn.model_selection import train_test_split
 
 
 TRAIN_CONFIG = {
@@ -31,6 +30,37 @@ TRAIN_CONFIG = {
     "loss": torch.nn.MSELoss,
     "loss_params": {},
 }
+
+VAL_SIZE = 0.2
+RANDOM_STATE = 42
+
+
+def train_val_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    t_df, v_df = train_test_split(df, test_size=VAL_SIZE, random_state=RANDOM_STATE, stratify=df["city"])
+    return t_df, v_df
+
+def explore_dataset(dataset_path: Path) -> pd.DataFrame:
+    bbox_path = dataset_path / "bbox"
+    images_path = dataset_path / "img"
+
+    images = images_path.rglob("*.png")
+    bboxes = bbox_path.rglob("*.csv")
+
+    data = {
+        "image_path": [],
+        "bbox_path": [],
+        "city": [],
+        "n_objects": [],
+    }
+
+    for im_path, bbox_path in zip(images, bboxes):
+        data["image_path"].append( str(im_path) )
+        data["bbox_path"].append( str(bbox_path) )
+        data["city"].append( im_path.parent.name )
+        data["n_objects"].append( len(pd.read_csv( str(bbox_path) )) )
+
+    final_df = pd.DataFrame(data)
+    return final_df
 
 
 # sample function for model architecture visualization

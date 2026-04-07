@@ -27,11 +27,9 @@ def inference(dataset_path: Path, model_path: Path) -> None:
         predictions to 'output_predictions' folder. The files can be saved in a flat
             structure with the same name as the input file.
     """
-    # Check for available GPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Computing with {}!".format(device))
+    print(f"Computing with {device}!")
 
-    # loading the model
     model = ModelExample()
     state_dict = torch.load(model_path)
     model.load_state_dict(state_dict)
