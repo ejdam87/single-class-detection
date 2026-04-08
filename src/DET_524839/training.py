@@ -10,8 +10,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import torch
 import pandas as pd
+import albumentations as A
 from tqdm import tqdm
-from dataset import LabeledDetectionDataset, UnlabeledDetectionDataset, DetectionDataset
+from dataset import LabeledDetectionDataset, DetectionDataset
 from network import SimpleGridDetector
 from torch import Tensor, nn
 from torch.optim import Optimizer
@@ -56,6 +57,8 @@ def explore_dataset(dataset_path: Path) -> pd.DataFrame:
     final_df = pd.DataFrame(data)
     return final_df
 
+
+# This was used to compute mean and standard deviation per color channel used in normalization
 def compute_mean_std(dataset: DetectionDataset) -> tuple[Tensor, Tensor]:
     sm = torch.zeros(3, dtype=torch.float64)
     sq_sm = torch.zeros(3, dtype=torch.float64)
@@ -77,7 +80,6 @@ def compute_mean_std(dataset: DetectionDataset) -> tuple[Tensor, Tensor]:
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
-    "use_precomputed_mean_std": True,
     "epochs": 3,
     "batch_size": 64,
     "optimizer": torch.optim.AdamW,
@@ -88,6 +90,51 @@ TRAIN_CONFIG = {
     "loss_params": {},
 }
 
+TRAIN_TRANSFORMS =A.Compose([
+        # Geometric augmentations
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.2),
+        A.ShiftScaleRotate(
+            shift_limit=0.05,
+            scale_limit=0.1,
+            rotate_limit=15,
+            p=0.5
+        ),
+
+        # Color augmentations
+        A.RandomBrightnessContrast(p=0.5),
+        A.HueSaturationValue(p=0.3),
+
+        # Blur / noise
+        A.GaussianBlur(p=0.2),
+        A.GaussNoise(p=0.2),
+
+        A.Normalize(
+            mean=MEAN,
+            std=STD,
+            max_pixel_value=1.0,
+        ),
+    ],
+    bbox_params=A.BboxParams(
+        format="pascal_voc",
+        label_fields=["labels"], # required by albumentations
+        min_visibility=0.3
+    )
+)
+
+VAL_TRANSFORMS = A.Compose([
+        A.Normalize(
+            mean=MEAN,
+            std=STD,
+            max_pixel_value=1.0,
+        ),
+    ],
+    bbox_params=A.BboxParams(
+        format="pascal_voc",
+        label_fields=["labels"], # required by albumentations
+        min_visibility=0.3
+    )
+)
 
 # draw_graph function saves an additional file: Graphviz DOT graph file, it's not necessary to delete it
 def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:
@@ -206,8 +253,8 @@ def training(dataset_path: Path) -> None:
     train_df, val_df = train_val_split(df)
     print("Data splitted!")
 
-    train_dataset = LabeledDetectionDataset(train_df)
-    val_dataset = LabeledDetectionDataset(val_df)
+    train_dataset = LabeledDetectionDataset(train_df, TRAIN_TRANSFORMS)
+    val_dataset = LabeledDetectionDataset(val_df, VAL_TRANSFORMS)
 
     train_dataloader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG["batch_size"], shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"])
