@@ -15,6 +15,7 @@ dependencies = [
     "albumentations",
     "scikit-learn",
     "tqdm",
+    "torchvision",
 ]
 
 [tool.setuptools]

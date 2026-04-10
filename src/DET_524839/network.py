@@ -4,39 +4,44 @@
 # This file should contain network class. The class should subclass the torch.nn.Module class.
 
 import torch
-import torch.nn as nn
+import torchvision
 from torch import Tensor
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 
-"""
-Problems:
-- cannot predict more than grid_size^2 objects
-- if object is on the border of cells (or spans multiple cells), it is missed
-- always predicts grid_size^2 objects -> no prunning
-- bbox non-normalized
-"""
-class SimpleGridDetector(nn.Module):
-    def __init__(self, grid_size: int) -> None:
+class FRCNNDetector(torch.nn.Module):
+    def __init__(self):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(3, 32, 3),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d((grid_size, grid_size))
-        )
+        self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights="DEFAULT")
 
-        # Each grid cell predicts [x, y, w, h, obj_score]
-        self.pred_head = nn.Linear(64, 5)
+        # Replace the head for custom number of classes
+        in_features = self.model.roi_heads.box_predictor.cls_score.in_features
+        self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 1)
 
-    def forward(self, x: Tensor) -> Tensor:
-        features = self.conv(x) # [B, C, grid_size, grid_size]
-        B, C, H, W = features.shape
+    def forward(self, images: Tensor, bboxes: Tensor | None=None) -> dict | list:
+        """
+        images:  [B, C, H, W]
+        targets: [B, N, 4]  (xyxy format assumed)
 
-        features = features.view(B, C, H * W) # [B, C, grid_size * grid_size]
-        features = features.permute(0, 2, 1) # [B, grid_size * grid_size, C]
+        Returns:
+            During training: dict of losses
+            During inference: list of dicts (boxes, labels, scores)
+        """
 
-        preds = self.pred_head(features) # [B, grid_size * grid_size, 5]
-        preds[..., 4] = torch.sigmoid(preds[..., 4]) # [B, grid_size * grid_size, 5]
+        image_list = [img for img in images]
+        if bboxes is not None:
+            bbox_list = [
+                {
+                    "boxes": bboxes[i],  # [N, 4]
+                    "labels": torch.ones(
+                        (bboxes[i].shape[0],),
+                        dtype=torch.int64,
+                        device=bboxes.device,
+                    )
+                }
+                for i in range(bboxes.shape[0])
+            ]
+        else:
+            bbox_list = None
 
-        return preds
+        return self.model(image_list, bbox_list)

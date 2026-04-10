@@ -12,7 +12,7 @@ import torch
 import albumentations as A
 from tqdm import tqdm
 from dataset import LabeledDetectionDataset
-from network import SimpleGridDetector
+from network import FRCNNDetector
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
@@ -78,6 +78,15 @@ VAL_TRANSFORMS = A.Compose([
         label_fields=["labels"], # required by albumentations
         min_visibility=0.3
     )
+)
+
+INFERENCE_TRANSFORMS = A.Compose([
+        A.Normalize(
+            mean=MEAN,
+            std=STD,
+            max_pixel_value=1.0,
+        ),
+    ]
 )
 
 
@@ -205,7 +214,7 @@ def training(dataset_path: Path) -> None:
     val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"])
     print("Dataloaders created!")
 
-    net = SimpleGridDetector(grid_size=10)
+    net = FRCNNDetector()
     input_sample = torch.zeros((1, 512, 1024))
     draw_network_architecture(net, input_sample)
 
