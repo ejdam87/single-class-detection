@@ -2,24 +2,18 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TypeVar, Generic, Any
+from typing import TypeVar, Generic
 
 import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
-from torch import Tensor
 from torch.utils.data import Dataset
 from albumentations import ToTensorV2
 from albumentations.core.composition import TransformType
 
-ImageSample = Tensor  # (3, H, W)
-Bboxes = Tensor # (N, 4)
+from type_signature import ImageSample, BboxesTensor, LabeledSample, UnlabeledSample, Metadata, BBoxesDict
 
-Metadata = dict[str, Any]
-
-LabeledSample = tuple[ImageSample, Metadata, Bboxes]
-UnlabeledSample = tuple[ImageSample, Metadata]
 
 T = TypeVar("T")
 
@@ -36,7 +30,7 @@ class DetectionDataset(ABC, Dataset[T], Generic[T]):
     def __len__(self) -> int:
         return len(self.df)
 
-    def _apply_transforms(self, image: Image, bboxes: Bboxes | None=None) -> ImageSample | tuple[ImageSample, Bboxes]:
+    def _apply_transforms(self, image: Image, bboxes: BboxesTensor | None=None) -> ImageSample | tuple[ImageSample, BboxesTensor]:
         if self.transforms is not None:
             if bboxes is None:
                 image = self.transforms(image=image)["image"]
@@ -78,7 +72,7 @@ class LabeledDetectionDataset(DetectionDataset[LabeledSample]):
             "city": sample["city"],
         }
 
-        return img, metadata, bbox_torch
+        return img, bbox_torch, metadata
 
 
 class UnlabeledDetectionDataset(DetectionDataset[UnlabeledSample]):
@@ -93,3 +87,30 @@ class UnlabeledDetectionDataset(DetectionDataset[UnlabeledSample]):
         }
 
         return img, metadata
+
+
+def collate_unlabeled(batch: list[UnlabeledSample]) -> tuple[list[ImageSample], list[Metadata]]:
+    images = []
+    metas = []
+    for img, meta in batch:
+        images.append(img)
+        metas.append(meta)
+    return images, metas
+
+
+def collate_labeled(batch: list[LabeledSample]) -> tuple[list[ImageSample], list[BBoxesDict], list[Metadata]]:
+    images = []
+    metas = []
+    bboxes = []
+    for img, bboxes, meta in batch:
+        images.append(img)
+        metas.append(meta)
+        bboxes.append({
+            "boxes": bboxes,
+            "labels": torch.ones(
+                (bboxes.shape[0],),
+                dtype=torch.int64
+            )
+        })
+
+    return images, bboxes, metas

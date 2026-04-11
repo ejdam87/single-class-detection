@@ -11,33 +11,29 @@ import matplotlib.pyplot as plt
 import torch
 import albumentations as A
 from tqdm import tqdm
-from dataset import LabeledDetectionDataset
-from network import FRCNNDetector
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchview import draw_graph
 
 
+from dataset import LabeledDetectionDataset, collate_labeled
+from network import FRCNNDetector
 from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
 
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
     "epochs": 3,
-    "batch_size": 64,
+    "batch_size": 1,
     "optimizer": torch.optim.AdamW,
     "optimizer_params": {
         "lr": 1e-3
     },
-    "loss": torch.nn.MSELoss,
-    "loss_params": {},
 }
 
 TRAIN_TRANSFORMS =A.Compose([
         # Geometric augmentations
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.2),
         A.ShiftScaleRotate(
             shift_limit=0.05,
             scale_limit=0.1,
@@ -72,12 +68,7 @@ VAL_TRANSFORMS = A.Compose([
             std=STD,
             max_pixel_value=1.0,
         ),
-    ],
-    bbox_params=A.BboxParams(
-        format="pascal_voc",
-        label_fields=["labels"], # required by albumentations
-        min_visibility=0.3
-    )
+    ]
 )
 
 INFERENCE_TRANSFORMS = A.Compose([
@@ -115,20 +106,21 @@ def plot_learning_curves(train_losses: list[float], validation_losses: list[floa
 
 def loss_batch(
           model: nn.Module,
-          loss_func: nn.Module,
           xb: Tensor,
           yb: Tensor,
           dev: torch.device,
           opt: Optimizer=None
     ) -> float:
 
-    xb, yb = xb.to(dev), yb.to(dev)
-    loss = loss_func(model(xb), yb)
+    xb = [x.to(dev) for x in xb]
+    yb = [{k: v.to(dev) for k, v in t.items()} for t in yb]
+    loss_dict = model(xb, yb)
+    loss = sum(loss_dict.values())
 
     if opt is not None:
+        opt.zero_grad()
         loss.backward()
         opt.step()
-        opt.zero_grad()
 
     return loss.item()
 
@@ -136,7 +128,6 @@ def loss_batch(
 def train_epoch(
           model: nn.Module,
           train_dl: DataLoader,
-          loss_func: nn.Module,
           dev: torch.device,
           opt: Optimizer
     ) -> float:
@@ -144,29 +135,27 @@ def train_epoch(
         model.train()
         loss = 0
         for xb, yb in tqdm(train_dl, total=len(train_dl), leave=False):
-            b_loss = loss_batch(model, loss_func, xb, yb, dev, opt)
+            b_loss = loss_batch(model, xb, yb, dev, opt)
             loss += b_loss
-            size += len(xb)
 
-        return loss
+        return loss / len(train_dl)
 
 
-def val_epoch(model: nn.Module, val_dl: DataLoader, loss_func: nn.Module, dev: torch.device) -> float:
+def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
         model.eval()
 
         loss = 0
         with torch.no_grad():
             for xb, yb in tqdm(val_dl, total=len(val_dl), leave=False):
-                loss += loss_batch(model, loss_func, xb, yb, dev)
-            
-        return loss
+                loss += loss_batch(model, xb, yb, dev)
+
+        return  loss/ len(val_dl)
 
 
 def fit(
     net: nn.Module,
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
-    loss: nn.Module,
     optimizer: Optimizer,
     device: torch.device,
 ) -> tuple[list[float], list[float]]:
@@ -175,8 +164,8 @@ def fit(
     val_losses: list[float] = []
 
     for _ in range(TRAIN_CONFIG["epochs"]):
-        tl = train_epoch(net, train_dataloader, loss, device, optimizer)
-        vl = val_epoch(net, val_dataloader, loss, device)
+        tl = train_epoch(net, train_dataloader, device, optimizer)
+        vl = val_epoch(net, val_dataloader, device)
 
         train_losses.append(tl)
         val_losses.append(vl)
@@ -210,23 +199,23 @@ def training(dataset_path: Path) -> None:
     train_dataset = LabeledDetectionDataset(train_df, TRAIN_TRANSFORMS)
     val_dataset = LabeledDetectionDataset(val_df, VAL_TRANSFORMS)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG["batch_size"], shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"])
+    train_dataloader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG["batch_size"], shuffle=True, collate_fn=collate_labeled)
+    val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"], collate_fn=collate_labeled)
     print("Dataloaders created!")
 
     net = FRCNNDetector()
-    input_sample = torch.zeros((1, 512, 1024))
+    net = net.to(device)
+    input_sample = torch.zeros((3, 512, 1024))
     draw_network_architecture(net, input_sample)
+    print("Network created!")
 
     optimizer = TRAIN_CONFIG["optimizer"](net.parameters(), **TRAIN_CONFIG["optimizer_params"])
-    loss = TRAIN_CONFIG["loss"](**TRAIN_CONFIG["loss_params"])
-
     print("Training started!")
+
     train_losses, val_losses = fit(
         net,
         train_dataloader,
         val_dataloader,
-        loss,
         optimizer,
         device
     )
