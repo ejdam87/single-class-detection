@@ -5,18 +5,32 @@ description = " Single class detection ML pipeline "
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "torch",
+    "torchvision",
     "graphviz>=0.20.3",
     "matplotlib>=3.10.1",
     "numpy>=2.2.3",
     "pillow>=11.1.0",
-    "torch>=2.6.0",
     "torchview>=0.2.6",
     "pandas",
     "albumentations",
     "scikit-learn",
     "tqdm",
-    "torchvision",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
 
 [tool.setuptools]
 packages = []

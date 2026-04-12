@@ -34,10 +34,10 @@ TRAIN_CONFIG = {
 
 TRAIN_TRANSFORMS =A.Compose([
         # Geometric augmentations
-        A.ShiftScaleRotate(
-            shift_limit=0.05,
-            scale_limit=0.1,
-            rotate_limit=15,
+        A.Affine(
+            translate_percent={"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
+            scale=(0.9, 1.1),
+            rotate=(-15, 15),
             p=0.5
         ),
 
@@ -113,6 +113,7 @@ def loss_batch(
     ) -> float:
 
     xb = [x.to(dev) for x in xb]
+
     yb = [{k: v.to(dev) for k, v in t.items()} for t in yb]
     loss_dict = model(xb, yb)
     loss = sum(loss_dict.values())
@@ -134,7 +135,7 @@ def train_epoch(
 
         model.train()
         loss = 0
-        for xb, yb in tqdm(train_dl, total=len(train_dl), leave=False):
+        for xb, yb, _ in tqdm(train_dl, total=len(train_dl), leave=False):
             b_loss = loss_batch(model, xb, yb, dev, opt)
             loss += b_loss
 
@@ -146,7 +147,7 @@ def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
 
         loss = 0
         with torch.no_grad():
-            for xb, yb in tqdm(val_dl, total=len(val_dl), leave=False):
+            for xb, yb, _ in tqdm(val_dl, total=len(val_dl), leave=False):
                 loss += loss_batch(model, xb, yb, dev)
 
         return  loss/ len(val_dl)
@@ -205,8 +206,8 @@ def training(dataset_path: Path) -> None:
 
     net = FRCNNDetector()
     net = net.to(device)
-    input_sample = torch.zeros((3, 512, 1024))
-    draw_network_architecture(net, input_sample)
+    # input_sample = torch.zeros((3, 512, 1024))
+    # draw_network_architecture(net, input_sample)
     print("Network created!")
 
     optimizer = TRAIN_CONFIG["optimizer"](net.parameters(), **TRAIN_CONFIG["optimizer_params"])

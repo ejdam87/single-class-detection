@@ -101,11 +101,11 @@ def collate_unlabeled(batch: list[UnlabeledSample]) -> tuple[list[ImageSample], 
 def collate_labeled(batch: list[LabeledSample]) -> tuple[list[ImageSample], list[BBoxesDict], list[Metadata]]:
     images = []
     metas = []
-    bboxes = []
+    bboxes_list = []
     for img, bboxes, meta in batch:
         images.append(img)
         metas.append(meta)
-        bboxes.append({
+        bboxes_list.append({
             "boxes": bboxes,
             "labels": torch.ones(
                 (bboxes.shape[0],),
@@ -113,4 +113,4 @@ def collate_labeled(batch: list[LabeledSample]) -> tuple[list[ImageSample], list
             )
         })
 
-    return images, bboxes, metas
+    return images, bboxes_list, metas
