@@ -25,7 +25,7 @@ from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
 # --- Training and Validation part
 TRAIN_CONFIG = {
     "epochs": 3,
-    "batch_size": 1,
+    "batch_size": 2,
     "optimizer": torch.optim.AdamW,
     "optimizer_params": {
         "lr": 1e-3
@@ -143,7 +143,7 @@ def train_epoch(
 
 
 def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
-        model.eval()
+        model.train() # to compute loss
 
         loss = 0
         with torch.no_grad():
