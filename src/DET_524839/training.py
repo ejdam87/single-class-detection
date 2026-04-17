@@ -70,16 +70,6 @@ VAL_TRANSFORMS = A.Compose(
 )
 
 
-INFERENCE_TRANSFORMS = A.Compose(
-    [
-        A.Normalize(
-            mean=MEAN,
-            std=STD,
-            max_pixel_value=1.0,
-        ),
-    ]
-)
-
 
 # draw_graph function saves an additional file: Graphviz DOT graph file, it's not necessary to delete it
 def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:

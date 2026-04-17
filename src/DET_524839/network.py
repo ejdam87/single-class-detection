@@ -18,6 +18,7 @@ class FRCNNDetector(torch.nn.Module):
             max_size=1024,
             image_mean=[0, 0, 0],
             image_std=[1, 1, 1],
+            box_score_thresh=0.0,
         )
 
         # Replace the head for custom number of classes

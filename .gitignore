@@ -138,6 +138,8 @@ celerybeat.pid
 
 model.pt
 
+output_predictions
+
 # Environments
 .env
 .envrc

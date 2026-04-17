@@ -103,10 +103,16 @@ class UnlabeledDetectionDataset(DetectionDataset[UnlabeledSample]):
         sample = self.df.iloc[idx]
         img = self._get_image(sample)
         img = self._apply_transforms(img)
-        metadata = {
-            "filename": Path(sample["image_path"]).name,
-            "city": sample["city"],
-        }
+
+        if "city" in self.df.columns:
+            metadata = {
+                "filename": Path(sample["image_path"]).name,
+                "city": sample["city"],
+            }
+        else:
+            metadata = {
+                "filename": Path(sample["image_path"]).name,
+            }
 
         return img, metadata
 
