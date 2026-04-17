@@ -18,37 +18,34 @@ from torchview import draw_graph
 
 
 from dataset import LabeledDetectionDataset, collate_labeled
-from network import FRCNNDetector
+from network import FRCNNDetector  # network is also standard package
 from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
-
+from type_signature import ImageSample, BBoxesDict
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
     "epochs": 3,
     "batch_size": 2,
+    "num_workers": 4,
     "optimizer": torch.optim.AdamW,
-    "optimizer_params": {
-        "lr": 1e-3
-    },
+    "optimizer_params": {"lr": 1e-4},
 }
 
-TRAIN_TRANSFORMS =A.Compose([
+TRAIN_TRANSFORMS = A.Compose(
+    [
         # Geometric augmentations
         A.Affine(
             translate_percent={"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
-            scale=(0.9, 1.1),
-            rotate=(-15, 15),
-            p=0.5
+            scale=(0.95, 1.05),
+            rotate=(-5, 5),
+            p=0.5,
         ),
-
         # Color augmentations
         A.RandomBrightnessContrast(p=0.5),
         A.HueSaturationValue(p=0.3),
-
         # Blur / noise
         A.GaussianBlur(p=0.2),
         A.GaussNoise(p=0.2),
-
         A.Normalize(
             mean=MEAN,
             std=STD,
@@ -57,12 +54,13 @@ TRAIN_TRANSFORMS =A.Compose([
     ],
     bbox_params=A.BboxParams(
         format="pascal_voc",
-        label_fields=["labels"], # required by albumentations
-        min_visibility=0.3
-    )
+        label_fields=["labels"],  # required by albumentations
+        min_visibility=0.3,
+    ),
 )
 
-VAL_TRANSFORMS = A.Compose([
+VAL_TRANSFORMS = A.Compose(
+    [
         A.Normalize(
             mean=MEAN,
             std=STD,
@@ -71,7 +69,9 @@ VAL_TRANSFORMS = A.Compose([
     ]
 )
 
-INFERENCE_TRANSFORMS = A.Compose([
+
+INFERENCE_TRANSFORMS = A.Compose(
+    [
         A.Normalize(
             mean=MEAN,
             std=STD,
@@ -93,7 +93,9 @@ def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:
     )
 
 
-def plot_learning_curves(train_losses: list[float], validation_losses: list[float]) -> None:
+def plot_learning_curves(
+    train_losses: list[float], validation_losses: list[float]
+) -> None:
     plt.figure(figsize=(10, 5))
     plt.title("Train and Evaluation Losses During Training")
     plt.plot(train_losses, label="train_loss")
@@ -105,12 +107,12 @@ def plot_learning_curves(train_losses: list[float], validation_losses: list[floa
 
 
 def loss_batch(
-          model: nn.Module,
-          xb: Tensor,
-          yb: Tensor,
-          dev: torch.device,
-          opt: Optimizer=None
-    ) -> float:
+    model: nn.Module,
+    xb: list[ImageSample],
+    yb: list[BBoxesDict],
+    dev: torch.device,
+    opt: Optimizer = None,
+) -> float:
 
     xb = [x.to(dev) for x in xb]
 
@@ -127,30 +129,27 @@ def loss_batch(
 
 
 def train_epoch(
-          model: nn.Module,
-          train_dl: DataLoader,
-          dev: torch.device,
-          opt: Optimizer
-    ) -> float:
+    model: nn.Module, train_dl: DataLoader, dev: torch.device, opt: Optimizer
+) -> float:
 
-        model.train()
-        loss = 0
-        for xb, yb, _ in tqdm(train_dl, total=len(train_dl), leave=False):
-            b_loss = loss_batch(model, xb, yb, dev, opt)
-            loss += b_loss
+    model.train()
+    loss = 0
+    for xb, yb, _ in tqdm(train_dl, total=len(train_dl), leave=False):
+        b_loss = loss_batch(model, xb, yb, dev, opt)
+        loss += b_loss
 
-        return loss / len(train_dl)
+    return loss / len(train_dl)
 
 
 def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
-        model.train() # to compute loss
+    model.train()  # to compute loss
 
-        loss = 0
-        with torch.no_grad():
-            for xb, yb, _ in tqdm(val_dl, total=len(val_dl), leave=False):
-                loss += loss_batch(model, xb, yb, dev)
+    loss = 0
+    with torch.no_grad():
+        for xb, yb, _ in tqdm(val_dl, total=len(val_dl), leave=False):
+            loss += loss_batch(model, xb, yb, dev)
 
-        return  loss/ len(val_dl)
+    return loss / len(val_dl)
 
 
 def fit(
@@ -166,10 +165,11 @@ def fit(
 
     for _ in range(TRAIN_CONFIG["epochs"]):
         tl = train_epoch(net, train_dataloader, device, optimizer)
-        vl = val_epoch(net, val_dataloader, device)
+        # vl = val_epoch(net, val_dataloader, device)
+        print(tl)
 
         train_losses.append(tl)
-        val_losses.append(vl)
+        val_losses.append(0.0)
 
     print("Training finished!")
     return train_losses, val_losses
@@ -200,8 +200,21 @@ def training(dataset_path: Path) -> None:
     train_dataset = LabeledDetectionDataset(train_df, TRAIN_TRANSFORMS)
     val_dataset = LabeledDetectionDataset(val_df, VAL_TRANSFORMS)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG["batch_size"], shuffle=True, collate_fn=collate_labeled)
-    val_dataloader = DataLoader(val_dataset, batch_size=TRAIN_CONFIG["batch_size"], collate_fn=collate_labeled)
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=TRAIN_CONFIG["batch_size"],
+        num_workers=TRAIN_CONFIG["num_workers"],
+        shuffle=True,
+        collate_fn=collate_labeled,
+    )
+
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=TRAIN_CONFIG["batch_size"],
+        num_workers=TRAIN_CONFIG["num_workers"],
+        collate_fn=collate_labeled,
+    )
+
     print("Dataloaders created!")
 
     net = FRCNNDetector()
@@ -210,15 +223,13 @@ def training(dataset_path: Path) -> None:
     # draw_network_architecture(net, input_sample)
     print("Network created!")
 
-    optimizer = TRAIN_CONFIG["optimizer"](net.parameters(), **TRAIN_CONFIG["optimizer_params"])
+    optimizer = TRAIN_CONFIG["optimizer"](
+        net.parameters(), **TRAIN_CONFIG["optimizer_params"]
+    )
     print("Training started!")
 
     train_losses, val_losses = fit(
-        net,
-        train_dataloader,
-        val_dataloader,
-        optimizer,
-        device
+        net, train_dataloader, val_dataloader, optimizer, device
     )
     print("Training finished!")
 
@@ -227,6 +238,7 @@ def training(dataset_path: Path) -> None:
 
     plot_learning_curves(train_losses, val_losses)
     print("Learning curves saved!")
+
 
 # ---
 

@@ -24,5 +24,7 @@ class FRCNNDetector(torch.nn.Module):
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
 
-    def forward(self, images: list[ImageSample], bboxes: list[BBoxesDict] | None=None) -> TrainingOutput | InferenceOutput:
+    def forward(
+        self, images: list[ImageSample], bboxes: list[BBoxesDict] | None = None
+    ) -> TrainingOutput | InferenceOutput:
         return self.model(images, bboxes)
