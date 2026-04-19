@@ -13,8 +13,7 @@ import albumentations as A
 from tqdm import tqdm
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from torchview import draw_graph
-
+from graphviz import Digraph
 
 from dataset import LabeledDetectionDataset, collate_labeled
 from network import FRCNNDetector  # network is also standard package
@@ -33,7 +32,7 @@ TRAIN_CONFIG = {
     "callbacks": {
         "early_stopping": EarlyStopping(patience=3),
         "best_model_logger": BestModelLogger(save_path="model.pt"),
-    }
+    },
 }
 
 TRAIN_TRANSFORMS = A.Compose(
@@ -75,16 +74,38 @@ VAL_TRANSFORMS = A.Compose(
 )
 
 
-# draw_graph function saves an additional file: Graphviz DOT graph file, it's not necessary to delete it
-def draw_network_architecture(net: FRCNNDetector, input_sample: ImageSample) -> None:
-    draw_graph(
-        net,
-        ([input_sample],),
-        graph_dir="TB",
-        save_graph=True,
-        filename="model_architecture",
-        expand_nested=True,
-    )
+def add_module_tree(
+    dot: Digraph,
+    net: FRCNNDetector,
+    parent_name: str = "model",
+    name: str = "model",
+    max_depth: int = 10,
+    depth: int = 0,
+) -> None:
+    if depth > max_depth:
+        return
+
+    label = f"{name}\n({net.__class__.__name__})"
+    dot.node(name, label)
+
+    if parent_name is not None:
+        dot.edge(parent_name, name)
+
+    for child_name, child in net.named_children():
+        child_full_name = f"{name}.{child_name}"
+        add_module_tree(dot, child, name, child_full_name, max_depth, depth + 1)
+
+
+def draw_network_architecture(net: FRCNNDetector) -> None:
+    net.eval()
+
+    dot = Digraph(format="png")
+    dot.attr(rankdir="LR", fontsize="10")
+
+    add_module_tree(dot, net, parent_name=None, name="FRCNNDetector")
+
+    dot.render("model_architecture", cleanup=True)
+    return dot
 
 
 def plot_learning_curves(
@@ -219,8 +240,7 @@ def training(dataset_path: Path) -> None:
 
     net = FRCNNDetector()
     net = net.to(device)
-    input_sample = torch.zeros((3, 512, 1024))
-    draw_network_architecture(net, input_sample)
+    draw_network_architecture(net)
     print("Network created!")
 
     optimizer = TRAIN_CONFIG["optimizer"](
@@ -229,7 +249,12 @@ def training(dataset_path: Path) -> None:
     print("Training started!")
 
     train_losses, val_losses = fit(
-        net, train_dataloader, val_dataloader, optimizer, device, TRAIN_CONFIG["callbacks"]
+        net,
+        train_dataloader,
+        val_dataloader,
+        optimizer,
+        device,
+        TRAIN_CONFIG["callbacks"],
     )
     print("Training finished!")
 

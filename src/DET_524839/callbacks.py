@@ -42,7 +42,9 @@ class BestModelLogger(Callback):
             self.best_loss = val_loss
             torch.save(model.state_dict(), self.save_path)
 
-            print(f"[BestModelLogger] New best model at epoch {epoch}, val_loss={val_loss:.6f}")
+            print(
+                f"[BestModelLogger] New best model at epoch {epoch}, val_loss={val_loss:.6f}"
+            )
             return True
 
         return False

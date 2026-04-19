@@ -35,7 +35,9 @@ INFERENCE_TRANSFORMS = A.Compose(
 )
 
 
-def inference_batch(model: FRCNNDetector, batch: list[ImageSample], metadata: list[Metadata]) -> list[pd.DataFrame]:
+def inference_batch(
+    model: FRCNNDetector, batch: list[ImageSample], metadata: list[Metadata]
+) -> list[pd.DataFrame]:
     outputs = model(batch)
     dfs = []
 
@@ -44,7 +46,9 @@ def inference_batch(model: FRCNNDetector, batch: list[ImageSample], metadata: li
         scores = output["scores"].cpu()
 
         labels = output["labels"].cpu()
-        assert torch.all(labels > 0), f"Background label detected in predictions: {labels}"
+        assert torch.all(labels > 0), (
+            f"Background label detected in predictions: {labels}"
+        )
 
         keep = scores >= INFERENCE_CONFIG["confidence_t"]
         boxes = boxes[keep]
@@ -53,7 +57,9 @@ def inference_batch(model: FRCNNDetector, batch: list[ImageSample], metadata: li
         filename = meta["filename"]
 
         if len(boxes) == 0:
-            df = pd.DataFrame(columns=["filename", "xmin", "xmax", "ymin", "ymax", "confidence"])
+            df = pd.DataFrame(
+                columns=["filename", "xmin", "xmax", "ymin", "ymax", "confidence"]
+            )
             dfs.append(df)
             continue
 
@@ -63,18 +69,21 @@ def inference_batch(model: FRCNNDetector, batch: list[ImageSample], metadata: li
         ymax = boxes[:, 3].numpy()
         confidence = scores.numpy()
 
-        df = pd.DataFrame({
-            "filename": [filename] * len(xmin),
-            "xmin": xmin,
-            "xmax": xmax,
-            "ymin": ymin,
-            "ymax": ymax,
-            "confidence": confidence,
-        })
+        df = pd.DataFrame(
+            {
+                "filename": [filename] * len(xmin),
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": ymin,
+                "ymax": ymax,
+                "confidence": confidence,
+            }
+        )
 
         dfs.append(df)
 
     return dfs
+
 
 # declaration for this function should not be changed
 @torch.no_grad()  # do not calculate the gradients
@@ -115,8 +124,8 @@ def inference(dataset_path: Path, model_path: Path) -> None:
         xb = [x.to(device) for x in xb]
         dfs = inference_batch(model, xb, metadata)
         for i, df in enumerate(dfs):
-            df.to_csv( str( (out_dir / metadata[i]["filename"]).with_suffix(".csv") ) )
-    
+            df.to_csv(str((out_dir / metadata[i]["filename"]).with_suffix(".csv")))
+
     print("Inference finished!")
 
 
