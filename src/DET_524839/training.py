@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import torch
 import albumentations as A
 from tqdm import tqdm
-from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchview import draw_graph
@@ -21,14 +20,20 @@ from dataset import LabeledDetectionDataset, collate_labeled
 from network import FRCNNDetector  # network is also standard package
 from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
 from type_signature import ImageSample, BBoxesDict
+from callbacks import EarlyStopping, BestModelLogger, Callback
+
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
-    "epochs": 3,
+    "epochs": 10,
     "batch_size": 2,
     "num_workers": 4,
     "optimizer": torch.optim.AdamW,
     "optimizer_params": {"lr": 1e-4},
+    "callbacks": {
+        "early_stopping": EarlyStopping(patience=3),
+        "best_model_logger": BestModelLogger(save_path="model.pt"),
+    }
 }
 
 TRAIN_TRANSFORMS = A.Compose(
@@ -70,12 +75,11 @@ VAL_TRANSFORMS = A.Compose(
 )
 
 
-
 # draw_graph function saves an additional file: Graphviz DOT graph file, it's not necessary to delete it
-def draw_network_architecture(net: nn.Module, input_sample: Tensor) -> None:
+def draw_network_architecture(net: FRCNNDetector, input_sample: ImageSample) -> None:
     draw_graph(
         net,
-        input_sample,
+        ([input_sample],),
         graph_dir="TB",
         save_graph=True,
         filename="model_architecture",
@@ -97,7 +101,7 @@ def plot_learning_curves(
 
 
 def loss_batch(
-    model: nn.Module,
+    model: FRCNNDetector,
     xb: list[ImageSample],
     yb: list[BBoxesDict],
     dev: torch.device,
@@ -119,7 +123,7 @@ def loss_batch(
 
 
 def train_epoch(
-    model: nn.Module, train_dl: DataLoader, dev: torch.device, opt: Optimizer
+    model: FRCNNDetector, train_dl: DataLoader, dev: torch.device, opt: Optimizer
 ) -> float:
 
     model.train()
@@ -131,8 +135,10 @@ def train_epoch(
     return loss / len(train_dl)
 
 
-def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
-    model.train()  # to compute loss
+def val_epoch(model: FRCNNDetector, val_dl: DataLoader, dev: torch.device) -> float:
+    # Loss can be computed only in train mode for frcnn. Moreover, it is safe because the model uses
+    # frozen batch norm layers, no dropouts etc.
+    model.train()
 
     loss = 0
     with torch.no_grad():
@@ -143,23 +149,27 @@ def val_epoch(model: nn.Module, val_dl: DataLoader, dev: torch.device) -> float:
 
 
 def fit(
-    net: nn.Module,
+    net: FRCNNDetector,
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     optimizer: Optimizer,
     device: torch.device,
+    callbacks: dict[str, Callback],
 ) -> tuple[list[float], list[float]]:
 
     train_losses: list[float] = []
     val_losses: list[float] = []
 
-    for _ in range(TRAIN_CONFIG["epochs"]):
+    for epoch in range(TRAIN_CONFIG["epochs"]):
         tl = train_epoch(net, train_dataloader, device, optimizer)
-        # vl = val_epoch(net, val_dataloader, device)
-        print(tl)
-
+        vl = val_epoch(net, val_dataloader, device)
         train_losses.append(tl)
-        val_losses.append(0.0)
+        val_losses.append(vl)
+
+        callbacks["best_model_logger"].on_epoch_end(epoch, vl, net)
+        should_stop = callbacks["early_stopping"].on_epoch_end(epoch, vl, net)
+        if should_stop:
+            break
 
     print("Training finished!")
     return train_losses, val_losses
@@ -209,8 +219,8 @@ def training(dataset_path: Path) -> None:
 
     net = FRCNNDetector()
     net = net.to(device)
-    # input_sample = torch.zeros((3, 512, 1024))
-    # draw_network_architecture(net, input_sample)
+    input_sample = torch.zeros((3, 512, 1024))
+    draw_network_architecture(net, input_sample)
     print("Network created!")
 
     optimizer = TRAIN_CONFIG["optimizer"](
@@ -219,7 +229,7 @@ def training(dataset_path: Path) -> None:
     print("Training started!")
 
     train_losses, val_losses = fit(
-        net, train_dataloader, val_dataloader, optimizer, device
+        net, train_dataloader, val_dataloader, optimizer, device, TRAIN_CONFIG["callbacks"]
     )
     print("Training finished!")
 
