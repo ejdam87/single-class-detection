@@ -19,7 +19,7 @@ from type_signature import ImageSample, Metadata
 
 
 INFERENCE_CONFIG = {
-    "confidence_t": 0.9,
+    "confidence_t": 0.0,
     "batch_size": 2,
     "num_workers": 2,
 }

@@ -16,6 +16,7 @@ dependencies = [
     "albumentations",
     "scikit-learn",
     "tqdm",
+    "scikit-image",
 ]
 
 [[tool.uv.index]]

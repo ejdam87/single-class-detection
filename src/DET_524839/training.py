@@ -33,6 +33,7 @@ TRAIN_CONFIG = {
         "early_stopping": EarlyStopping(patience=3),
         "best_model_logger": BestModelLogger(save_path="model.pt"),
     },
+    "final_run": True,
 }
 
 TRAIN_TRANSFORMS = A.Compose(
@@ -215,7 +216,13 @@ def training(dataset_path: Path) -> None:
     df = explore_dataset(dataset_path)
     print("Data frame prepared!")
 
-    train_df, val_df, _ = train_val_test_split(df)
+    if TRAIN_CONFIG["final_run"]:
+        train_df, val_df = train_val_test_split(df, final_run=True)
+    else:
+        train_df, val_df, _ = train_val_test_split(
+            df
+        )  # since its seeded, test set can be used elsewhere for testing
+
     print("Data splitted!")
 
     train_dataset = LabeledDetectionDataset(train_df, TRAIN_TRANSFORMS)

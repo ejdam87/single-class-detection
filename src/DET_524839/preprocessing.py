@@ -17,10 +17,18 @@ STD = [47.6729, 41.8091, 46.3294]
 
 def train_val_test_split(
     df: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    final_run: bool = False,
+) -> (
+    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] | tuple[pd.DataFrame, pd.DataFrame]
+):
     trv_df, te_df = train_test_split(
         df, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=df["city"]
     )
+
+    # no need for separate test set
+    if final_run:
+        return trv_df, te_df
+
     tr_df, v_df = train_test_split(
         trv_df, test_size=VAL_SIZE, random_state=RANDOM_STATE, stratify=trv_df["city"]
     )
