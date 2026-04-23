@@ -13,10 +13,10 @@ import albumentations as A
 from tqdm import tqdm
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from graphviz import Digraph
+from torchview import draw_graph
 
 from dataset import LabeledDetectionDataset, collate_labeled
-from network import MyFRCNNDetector  # network is also standard package
+from network import MyFRCNNDetector, WrapModel  # network is also standard package
 from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
 from type_signature import ImageSample, BBoxesDict
 from callbacks import EarlyStopping, BestModelLogger, Callback
@@ -75,38 +75,15 @@ VAL_TRANSFORMS = A.Compose(
 )
 
 
-def add_module_tree(
-    dot: Digraph,
-    net: MyFRCNNDetector,
-    parent_name: str = "model",
-    name: str = "model",
-    max_depth: int = 10,
-    depth: int = 0,
-) -> None:
-    if depth > max_depth:
-        return
-
-    label = f"{name}\n({net.__class__.__name__})"
-    dot.node(name, label)
-
-    if parent_name is not None:
-        dot.edge(parent_name, name)
-
-    for child_name, child in net.named_children():
-        child_full_name = f"{name}.{child_name}"
-        add_module_tree(dot, child, name, child_full_name, max_depth, depth + 1)
-
-
 def draw_network_architecture(net: MyFRCNNDetector) -> None:
-    net.eval()
-
-    dot = Digraph(format="png")
-    dot.attr(rankdir="LR", fontsize="10")
-
-    add_module_tree(dot, net, parent_name=None, name="FRCNNDetector")
-
-    dot.render("model_architecture", cleanup=True)
-    return dot
+    draw_graph(
+        WrapModel(net),
+        torch.rand( 1, 3, 512, 1024 ),
+        graph_dir="TB",
+        save_graph=True,
+        filename="model_architecture",
+        expand_nested=True,
+    )
 
 
 def plot_learning_curves(

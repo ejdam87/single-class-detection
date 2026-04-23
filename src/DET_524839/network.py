@@ -141,3 +141,14 @@ class MyFRCNNDetector(torch.nn.Module):
             return losses
 
         return detections
+
+
+class WrapModel(torch.nn.Module):
+    def __init__(self, model: MyFRCNNDetector) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> InferenceOutput:
+        # x: (B, C, H, W)
+        images = [img for img in x]
+        return self.model(images)
