@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 
-from network import FRCNNDetector
+from network import MyFRCNNDetector
 
 import torch
 
 
 class Callback(ABC):
     @abstractmethod
-    def on_epoch_end(self, epoch: int, val_loss: float, model: FRCNNDetector) -> bool:
+    def on_epoch_end(self, epoch: int, val_loss: float, model: MyFRCNNDetector) -> bool:
         pass
 
 
@@ -17,7 +17,7 @@ class EarlyStopping(Callback):
         self.best_loss = float("inf")
         self.counter = 0
 
-    def on_epoch_end(self, epoch: int, val_loss: float, model: FRCNNDetector) -> bool:
+    def on_epoch_end(self, epoch: int, val_loss: float, model: MyFRCNNDetector) -> bool:
         if val_loss < self.best_loss:
             self.best_loss = val_loss
             self.counter = 0
@@ -37,7 +37,7 @@ class BestModelLogger(Callback):
         self.best_model_state = None
         self.save_path = save_path
 
-    def on_epoch_end(self, epoch: int, val_loss: float, model: FRCNNDetector) -> bool:
+    def on_epoch_end(self, epoch: int, val_loss: float, model: MyFRCNNDetector) -> bool:
         if val_loss < self.best_loss:
             self.best_loss = val_loss
             torch.save(model.state_dict(), self.save_path)

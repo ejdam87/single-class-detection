@@ -12,7 +12,7 @@ import pandas as pd
 import albumentations as A
 from tqdm import tqdm
 
-from network import FRCNNDetector
+from network import MyFRCNNDetector
 from dataset import UnlabeledDetectionDataset, collate_unlabeled
 from preprocessing import MEAN, STD
 from type_signature import ImageSample, Metadata
@@ -36,7 +36,7 @@ INFERENCE_TRANSFORMS = A.Compose(
 
 
 def inference_batch(
-    model: FRCNNDetector, batch: list[ImageSample], metadata: list[Metadata]
+    model: MyFRCNNDetector, batch: list[ImageSample], metadata: list[Metadata]
 ) -> list[pd.DataFrame]:
     outputs = model(batch)
     dfs = []
@@ -102,7 +102,7 @@ def inference(dataset_path: Path, model_path: Path) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Computing with {device}!")
 
-    model = FRCNNDetector()
+    model = MyFRCNNDetector()
     state_dict = torch.load(model_path)
     model.load_state_dict(state_dict)
     model.eval()

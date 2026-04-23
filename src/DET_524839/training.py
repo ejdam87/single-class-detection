@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from graphviz import Digraph
 
 from dataset import LabeledDetectionDataset, collate_labeled
-from network import FRCNNDetector  # network is also standard package
+from network import MyFRCNNDetector  # network is also standard package
 from preprocessing import explore_dataset, train_val_test_split, MEAN, STD
 from type_signature import ImageSample, BBoxesDict
 from callbacks import EarlyStopping, BestModelLogger, Callback
@@ -77,7 +77,7 @@ VAL_TRANSFORMS = A.Compose(
 
 def add_module_tree(
     dot: Digraph,
-    net: FRCNNDetector,
+    net: MyFRCNNDetector,
     parent_name: str = "model",
     name: str = "model",
     max_depth: int = 10,
@@ -97,7 +97,7 @@ def add_module_tree(
         add_module_tree(dot, child, name, child_full_name, max_depth, depth + 1)
 
 
-def draw_network_architecture(net: FRCNNDetector) -> None:
+def draw_network_architecture(net: MyFRCNNDetector) -> None:
     net.eval()
 
     dot = Digraph(format="png")
@@ -123,7 +123,7 @@ def plot_learning_curves(
 
 
 def loss_batch(
-    model: FRCNNDetector,
+    model: MyFRCNNDetector,
     xb: list[ImageSample],
     yb: list[BBoxesDict],
     dev: torch.device,
@@ -145,7 +145,7 @@ def loss_batch(
 
 
 def train_epoch(
-    model: FRCNNDetector, train_dl: DataLoader, dev: torch.device, opt: Optimizer
+    model: MyFRCNNDetector, train_dl: DataLoader, dev: torch.device, opt: Optimizer
 ) -> float:
 
     model.train()
@@ -157,7 +157,7 @@ def train_epoch(
     return loss / len(train_dl)
 
 
-def val_epoch(model: FRCNNDetector, val_dl: DataLoader, dev: torch.device) -> float:
+def val_epoch(model: MyFRCNNDetector, val_dl: DataLoader, dev: torch.device) -> float:
     # Loss can be computed only in train mode for frcnn. Moreover, it is safe because the model uses
     # frozen batch norm layers, no dropouts etc.
     model.train()
@@ -171,7 +171,7 @@ def val_epoch(model: FRCNNDetector, val_dl: DataLoader, dev: torch.device) -> fl
 
 
 def fit(
-    net: FRCNNDetector,
+    net: MyFRCNNDetector,
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     optimizer: Optimizer,
@@ -245,7 +245,7 @@ def training(dataset_path: Path) -> None:
 
     print("Dataloaders created!")
 
-    net = FRCNNDetector()
+    net = MyFRCNNDetector()
     net = net.to(device)
     draw_network_architecture(net)
     print("Network created!")
