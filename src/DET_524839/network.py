@@ -25,7 +25,7 @@ class MyFRCNNDetector(torch.nn.Module):
         super().__init__()
 
         # -------------------------
-        # Backbone
+        # Backbone -> extracting features (pyramid enables multi-scale features)
         # -------------------------
         backbone_base = resnet50(weights="DEFAULT")
 
@@ -42,7 +42,7 @@ class MyFRCNNDetector(torch.nn.Module):
         )
 
         # -------------------------
-        # RPN
+        # RPN -> proposing regions with objects
         # -------------------------
         anchor_generator = AnchorGenerator(
             sizes=(
@@ -86,14 +86,16 @@ class MyFRCNNDetector(torch.nn.Module):
         # -------------------------
         representation_size = 1024
 
+        # dense representation network
         box_head = TwoMLPHead(
             in_channels=256 * 7 * 7,
             representation_size=representation_size,
         )
 
+        # classification, bbox regression
         box_predictor = FastRCNNPredictor(
             representation_size,
-            num_classes=2,
+            num_classes=2,  # background, car
         )
 
         self.roi_heads = RoIHeads(
@@ -134,6 +136,7 @@ class MyFRCNNDetector(torch.nn.Module):
             features, proposals, image_sizes, bboxes
         )  # same structure as above
 
+        # continue structure of submodules returning losses on training only
         if self.training:
             losses = {}
             losses.update(rpn_losses)
@@ -143,6 +146,7 @@ class MyFRCNNDetector(torch.nn.Module):
         return detections
 
 
+# Visualization purposes
 class WrapModel(torch.nn.Module):
     def __init__(self, model: MyFRCNNDetector) -> None:
         super().__init__()

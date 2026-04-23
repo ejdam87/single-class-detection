@@ -17,7 +17,7 @@ STD = [47.6729, 41.8091, 46.3294]
 
 def train_val_test_split(
     df: pd.DataFrame,
-    final_run: bool = False,
+    val_only: bool = False,
 ) -> (
     tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] | tuple[pd.DataFrame, pd.DataFrame]
 ):
@@ -26,7 +26,7 @@ def train_val_test_split(
     )
 
     # no need for separate test set
-    if final_run:
+    if val_only:
         return trv_df, te_df
 
     tr_df, v_df = train_test_split(

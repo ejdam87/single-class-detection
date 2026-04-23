@@ -78,7 +78,7 @@ VAL_TRANSFORMS = A.Compose(
 def draw_network_architecture(net: MyFRCNNDetector) -> None:
     draw_graph(
         WrapModel(net),
-        torch.rand( 1, 3, 512, 1024 ),
+        torch.rand(1, 3, 512, 1024),
         graph_dir="TB",
         save_graph=True,
         filename="model_architecture",
@@ -194,7 +194,9 @@ def training(dataset_path: Path) -> None:
     print("Data frame prepared!")
 
     if TRAIN_CONFIG["final_run"]:
-        train_df, val_df = train_val_test_split(df, final_run=True)
+        train_df, val_df = train_val_test_split(
+            df, val_only=True
+        )  # no need for test set on the final run
     else:
         train_df, val_df, _ = train_val_test_split(
             df
@@ -241,9 +243,6 @@ def training(dataset_path: Path) -> None:
         TRAIN_CONFIG["callbacks"],
     )
     print("Training finished!")
-
-    torch.save(net.state_dict(), "model.pt")
-    print("Model saved!")
 
     plot_learning_curves(train_losses, val_losses)
     print("Learning curves saved!")

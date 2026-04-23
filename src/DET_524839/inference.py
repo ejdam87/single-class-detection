@@ -14,11 +14,12 @@ from tqdm import tqdm
 
 from network import MyFRCNNDetector
 from dataset import UnlabeledDetectionDataset, collate_unlabeled
-from preprocessing import MEAN, STD
+from preprocessing import MEAN, STD, explore_dataset, train_val_test_split
 from type_signature import ImageSample, Metadata
 
 
 INFERENCE_CONFIG = {
+    "arbitrary_samples": True,
     "confidence_t": 0.0,
     "batch_size": 2,
     "num_workers": 2,
@@ -109,7 +110,12 @@ def inference(dataset_path: Path, model_path: Path) -> None:
     model = model.to(device)
     print("Model loaded!")
 
-    df = pd.DataFrame({"image_path": list(dataset_path.rglob("*.png"))})
+    if INFERENCE_CONFIG["arbitrary_samples"]:
+        df = pd.DataFrame({"image_path": list(dataset_path.rglob("*.png"))})
+    else:  # testing purposes
+        df = explore_dataset(dataset_path)
+        _, _, df = train_val_test_split(df, val_only=False)
+
     ds = UnlabeledDetectionDataset(df, INFERENCE_TRANSFORMS)
     dl = torch.utils.data.DataLoader(
         ds,
@@ -120,6 +126,9 @@ def inference(dataset_path: Path, model_path: Path) -> None:
     print("Dataloader created!")
 
     out_dir = Path("output_predictions")
+    out_dir.mkdir(exist_ok=True, parents=True)
+
+    print("Inference started!")
     for xb, metadata in tqdm(dl, total=len(dl), leave=False):
         xb = [x.to(device) for x in xb]
         dfs = inference_batch(model, xb, metadata)

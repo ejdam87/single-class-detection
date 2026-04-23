@@ -1987,7 +1987,7 @@ strict digraph model {
                     </TR>
                     <TR>
                         <TD COLSPAN="2">output: </TD>
-                        <TD COLSPAN="2">(2431,) </TD>
+                        <TD COLSPAN="2">(2416,) </TD>
                     </TR>
                     </TABLE>> fillcolor=aliceblue]
 			153 [label=<
@@ -1996,7 +1996,7 @@ strict digraph model {
                     <TR>
                         <TD ROWSPAN="2">__getitem__<BR/>depth:3</TD>
                         <TD COLSPAN="2">input:</TD>
-                        <TD COLSPAN="2">(2431,) </TD>
+                        <TD COLSPAN="2">(2416,) </TD>
                     </TR>
                     <TR>
                         <TD COLSPAN="2">output: </TD>
@@ -3251,7 +3251,7 @@ strict digraph model {
                     </TR>
                     <TR>
                         <TD COLSPAN="2">output: </TD>
-                        <TD COLSPAN="2">(786,) </TD>
+                        <TD COLSPAN="2">(751,) </TD>
                     </TR>
                     </TABLE>> fillcolor=aliceblue]
 			250 [label=<
@@ -3260,7 +3260,7 @@ strict digraph model {
                     <TR>
                         <TD ROWSPAN="2">__getitem__<BR/>depth:3</TD>
                         <TD COLSPAN="2">input:</TD>
-                        <TD COLSPAN="2">(786,) </TD>
+                        <TD COLSPAN="2">(751,) </TD>
                     </TR>
                     <TR>
                         <TD COLSPAN="2">output: </TD>
