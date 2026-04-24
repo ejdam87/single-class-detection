@@ -24,7 +24,7 @@ from callbacks import EarlyStopping, BestModelLogger, Callback
 
 # --- Training and Validation part
 TRAIN_CONFIG = {
-    "epochs": 10,
+    "epochs": 12,
     "batch_size": 2,
     "num_workers": 4,
     "optimizer": torch.optim.AdamW,
