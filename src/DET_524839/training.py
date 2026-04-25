@@ -83,6 +83,7 @@ def draw_network_architecture(net: MyFRCNNDetector) -> None:
         save_graph=True,
         filename="model_architecture",
         expand_nested=True,
+        depth=2,
     )
 
 

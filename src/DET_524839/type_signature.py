@@ -1,3 +1,7 @@
+# STUDENT's UCO: 524839
+
+"""This file contains type aliases for objects used around the whole project."""
+
 from typing import Any
 
 from torch import Tensor
@@ -13,4 +17,6 @@ LabeledSample = tuple[ImageSample, BboxesTensor, Metadata]
 UnlabeledSample = tuple[ImageSample, Metadata]
 
 InferenceOutput = list[dict[str, Tensor]]  # boxes, labels, scores
-TrainingOutput = dict[str, Tensor]  # regression and classification losses
+TrainingOutput = dict[
+    str, Tensor
+]  # regression and classification losses (final detection and region proposal)

@@ -1,3 +1,7 @@
+# STUDENT's UCO: 524839
+
+"""This file contains callbacks called on epoch end of each epoch."""
+
 from abc import ABC, abstractmethod
 
 from network import MyFRCNNDetector

@@ -1,3 +1,7 @@
+# STUDENT's UCO: 524839
+
+"""This file contains exploration and preprocessing of the dataset."""
+
 import torch
 import pandas as pd
 from sklearn.model_selection import train_test_split

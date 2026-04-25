@@ -19,8 +19,8 @@ from type_signature import ImageSample, Metadata
 
 
 INFERENCE_CONFIG = {
-    "arbitrary_samples": True,
-    "confidence_t": 0.0,
+    "arbitrary_samples": True,  # whether to use test set on inference on new samples
+    "confidence_t": 0.0,  # do not filter any bboxes after non maxima suppresion since the evaluation metric is AP
     "batch_size": 2,
     "num_workers": 2,
 }
