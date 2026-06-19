@@ -1,25 +1,33 @@
-# single-class-detection
-Single Class Detection ML pipeline
+# Car Detection
 
-```bash
-uv pip install --python /home/jovyan/prostate-cancer/.venv/bin/python ipykernel
-/home/jovyan/prostate-cancer/.venv/bin/python -m ipykernel install --user --name prostate --display-name "Python (prostate)"
-```
+Car Detection ML pipeline
 
-training:
+## Description
 
-```
-uv run python training.py ..\data_det_public\data_det_public\ 
-```
+This project composes a deep learning pipeline for multi-car detection in a given picture. It emphasises the understanding of the underlying detection model - **FasterRCNN**.
 
-inference:
+## Data
 
-```
-uv run python inference.py ..\data_det_public\data_det_public\ model.pt 
-```
+Data used for training and evaluation are not public, but were infered from public [City Scapes](https://www.cityscapes-dataset.com/) dataset.
 
-eval:
+## Usage
+
+In the `src` folder
+
+### Training
 
 ```
-uv run python evaluation.py DET ..\data_det_public\data_det_public\bbox\ .\output_predictions\
+uv run python training.py <dataset_path>
+```
+
+### Inference
+
+```
+uv run python inference.py <dataset_path> model.pt 
+```
+
+### Evaluation
+
+```
+uv run python evaluation.py DET <dataset_path_bboxes> .\output_predictions\
 ```
