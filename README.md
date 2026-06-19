@@ -18,6 +18,12 @@ Data exploration is performed in `src/notebooks/data_exploration`.
 
 ![Input Sample](./images/input_sample.jpg)
 
+## Architecture
+
+We use FasterRCNN neural network as the detection algorithm. It is fully accessible from the `torchivsion` library, however, we developed it ourselves from sufficiently fundamental building blocks for better understanding.
+
+![Architecture](./src/model_architecture.png)
+
 ## Usage
 
 In the `src` folder
