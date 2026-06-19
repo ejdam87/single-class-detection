@@ -1,5 +1,3 @@
-# STUDENT's UCO: 524839
-
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TypeVar, Generic

@@ -1,5 +1,3 @@
-# STUDENT's UCO: 524839
-
 """This file contains type aliases for objects used around the whole project."""
 
 from typing import Any

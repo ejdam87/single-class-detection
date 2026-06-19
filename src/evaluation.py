@@ -1,5 +1,3 @@
-# THIS FILE SHOULD NOT BE CHANGED
-
 # Description:
 # This file should be used for computing scores for each of the project topics
 # Usage: python evaluation.py <project_code> <path_2_output_predictions>

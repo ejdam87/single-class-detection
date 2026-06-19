@@ -1,5 +1,3 @@
-# STUDENT's UCO: 524839
-
 # Description:
 # This file should contain network class. The class should subclass the torch.nn.Module class.
 

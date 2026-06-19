@@ -1,5 +1,3 @@
-# STUDENT's UCO: 524839
-
 """This file contains exploration and preprocessing of the dataset."""
 
 import torch

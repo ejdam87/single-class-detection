@@ -1,5 +1,3 @@
-# STUDENT's UCO: 524839
-
 # Description:
 # This file should be used for performing inference on a network
 # Usage: inference.py <dataset_path> <model_path>
