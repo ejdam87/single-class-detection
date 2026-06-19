@@ -10,9 +10,25 @@ This project composes a deep learning pipeline for multi-car detection in a give
 
 Data used for training and evaluation are not public, but were infered from public [City Scapes](https://www.cityscapes-dataset.com/) dataset.
 
+## Data Exploration
+
+Data exploration is performed in `src/notebooks/data_exploration`.
+
+### Input Sample
+
+![Input Sample](./images/input_sample.jpg)
+
 ## Usage
 
 In the `src` folder
+
+### Before anything
+
+Make sure to have `uv` package manager installed on your device. To install necessary libaries to your environment, run:
+
+```
+uv sync
+```
 
 ### Training
 
